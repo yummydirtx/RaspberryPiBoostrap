@@ -1,12 +1,8 @@
 # Imports
-import cv2
-import torch
+import mediapipe as mp
 from picamera2 import Picamera2
 import time
-import os
-
-# load model
-model = torch.hub.load('ultralytics/yolov5', 'custom', path='helmet.pt')
+import cv2
 
 # Initialize the pi camera
 pi_camera = Picamera2()
@@ -18,53 +14,34 @@ pi_camera.configure(config)
 pi_camera.start()
 time.sleep(1)
 
-def detect_objects(image):
-	'''
-	Dont change this function
-	'''
-	temp_path = 'temp.png'
-	
-	cv2.imwrite(temp_path, image)
-	imgs = [temp_path]
-
-	# Inference
-	results = model(imgs)
-	df = results.pandas().xyxy[0]
-	# print(df)
-	detected_objects = []
-	for index, row in df.iterrows():
-		p1 = (int(row['xmin']), int(row['ymin']))
-		p2 = (int(row['xmax']), int(row['ymax']))
-		detected_objects.append((p1, p2, round(row['confidence'] * 100, 2)))
-
-	os.remove(temp_path)
-	
-	return detected_objects
-
-
-def draw_on_image(image, objectsDetected, color=(255, 0, 0), thickness=2,
-                       fontScale=1, font=cv2.FONT_HERSHEY_SIMPLEX):
+def draw_pose(image, landmarks):
 	''' 
 	TODO Task 1
 	
-	Code to this fucntion to draw squares to the objects detected then 
-	return the image. Use the cv2.rectangle function. Also add text using
-	cv2.putText to put the confidences of the object detected.
+	Code to this fucntion to draw circles on the landmarks and lines
+	connecting the landmarks then return the image.
+	
+	Use the cv2.line and cv2.circle functions.
 
-	objectsDetected is a collection of tuples of a start_point, an 
-	end_point and a confidence. start_point and end_point are integers
-	and confidence is a float
-	
-	
+	landmarks is a collection of 33 dictionaries with the following keys
+		x: float values in the interval of [0.0,1.0]
+		y: float values in the interval of [0.0,1.0]
+		z: float values in the interval of [0.0,1.0]
+		visibility: float values in the interval of [0.0,1.0]
+		
 	References:
 	https://docs.opencv.org/4.x/dc/da5/tutorial_py_drawing_functions.html
+	https://developers.google.com/mediapipe/solutions/vision/pose_landmarker
 	'''
-	
-	for start_point, end_point, confidence in objectsDetected:
-		pass
 
-	return image
+	# copy the image
+	landmark_image = image.copy()
 	
+	# get the dimensions of the image
+	height, width, _ = image.shape
+	
+	
+	return landmark_image
 
 def main():
 	''' 
@@ -75,20 +52,33 @@ def main():
 	TODO Task 3
 		modify this function further to loop and show a video
 	'''
-	# Load the image
-	image = cv2.imread("helmet.jpg")
 
-	# Detect Objects
-	objectsDetected = detect_objects(image)
-
-	# Draw on the image
-	image = draw_on_image(image, objectsDetected)
+	# Create a pose estimation model 
+	mp_pose = mp.solutions.pose
 	
-	# Save the output image
-	cv2.imwrite('outout.png', image)
+	# start detecting the poses
+	with mp_pose.Pose(
+			min_detection_confidence=0.5,
+			min_tracking_confidence=0.5) as pose:
 
-	
+		# load test image
+		image = cv2.imread("person.png")	
+
+		# To improve performance, optionally mark the image as not 
+		# writeable to pass by reference.
+		image.flags.writeable = False
 		
-if __name__ == "__main__":
-    main()
+		# get the landmarks
+		results = pose.process(image)
+		
+		if results.pose_landmarks != None:
+			result_image = draw_pose(image, results.pose_landmarks)
+			cv2.imwrite('output.png', result_image)
+			print(results.pose_landmarks)
+		else:
+			print('No Pose Detected')
 
+
+if __name__ == "__main__":
+	main()
+	print('done')
