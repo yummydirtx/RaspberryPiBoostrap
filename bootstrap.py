@@ -39,7 +39,20 @@ def draw_pose(image, landmarks):
 	
 	# get the dimensions of the image
 	height, width, _ = image.shape
-	
+
+	# loop through the landmarks
+	for landmark in landmarks.landmark:
+		x = int(landmark.x * width)
+		y = int(landmark.y * height)
+		cv2.circle(landmark_image, (x, y), 5, (0, 255, 0), -1)
+	# Draw lines between connected landmarks
+	for connection in mp.solutions.pose.POSE_CONNECTIONS:
+		start_idx, end_idx = connection
+		start = landmarks.landmark[start_idx]
+		end = landmarks.landmark[end_idx]
+		x1, y1 = int(start.x * width), int(start.y * height)
+		x2, y2 = int(end.x * width), int(end.y * height)
+		cv2.line(landmark_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
 	
 	return landmark_image
 
