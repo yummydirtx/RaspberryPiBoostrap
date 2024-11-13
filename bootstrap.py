@@ -74,25 +74,41 @@ def main():
 			min_detection_confidence=0.5,
 			min_tracking_confidence=0.5) as pose:
 
-		# Capture an image from the Pi Camera
-		image = pi_camera.capture_array()
+		# Create a window to display the video
+		cv2.namedWindow('Pose Estimation', cv2.WINDOW_AUTOSIZE)
 
-		# Convert the image from RGB to BGR (OpenCV uses BGR)
-		image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+		try:
+			while True:
+				# Capture a frame from the Pi Camera
+				image = pi_camera.capture_array()
 
-		# To improve performance, mark the image as not writeable
-		image.flags.writeable = False
+				# Convert the image from RGB to BGR (OpenCV uses BGR)
+				image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
 
-		# Get the landmarks
-		results = pose.process(image)
+				# To improve performance, mark the image as not writeable
+				image.flags.writeable = False
 
-		if results.pose_landmarks is not None:
-			# Draw the pose landmarks on the image
-			result_image = draw_pose(image, results.pose_landmarks)
-			cv2.imwrite('output.png', result_image)
-			print(results.pose_landmarks)
-		else:
-			print('No Pose Detected')
+				# Process the frame to find pose landmarks
+				results = pose.process(image)
+
+				# Draw the pose landmarks on the frame
+				if results.pose_landmarks is not None:
+					image = draw_pose(image, results.pose_landmarks)
+
+				# Display the frame
+				cv2.imshow('Pose Estimation', image)
+
+				# Check for user input to exit
+				if cv2.waitKey(1) & 0xFF == ord('q'):
+					break
+
+		except KeyboardInterrupt:
+			# Handle the Ctrl+C exception to keep its error message from displaying.
+			pass
+		finally:
+			# When everything is done, release the window
+			cv2.destroyAllWindows()
+			pi_camera.close()
 
 
 if __name__ == "__main__":
