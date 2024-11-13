@@ -68,23 +68,26 @@ def main():
 
 	# Create a pose estimation model 
 	mp_pose = mp.solutions.pose
-	
-	# start detecting the poses
+
+	# Start detecting the poses
 	with mp_pose.Pose(
 			min_detection_confidence=0.5,
 			min_tracking_confidence=0.5) as pose:
 
-		# load test image
-		image = cv2.imread("person.png")	
+		# Capture an image from the Pi Camera
+		image = pi_camera.capture_array()
 
-		# To improve performance, optionally mark the image as not 
-		# writeable to pass by reference.
+		# Convert the image from RGB to BGR (OpenCV uses BGR)
+		image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+
+		# To improve performance, mark the image as not writeable
 		image.flags.writeable = False
-		
-		# get the landmarks
+
+		# Get the landmarks
 		results = pose.process(image)
-		
-		if results.pose_landmarks != None:
+
+		if results.pose_landmarks is not None:
+			# Draw the pose landmarks on the image
 			result_image = draw_pose(image, results.pose_landmarks)
 			cv2.imwrite('output.png', result_image)
 			print(results.pose_landmarks)
